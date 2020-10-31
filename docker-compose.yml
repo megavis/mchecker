@@ -1,0 +1,34 @@
+version: '3.0'
+
+services:
+  mc:
+    image: "mymc:plugins"
+    environment:
+      EULA: "true"
+      TYPE: PAPER
+      #MEMORY: 512M
+      MEMORY: 1G
+      VERSION: 1.12.2
+      # needed for Paper versions before 1.14
+      CONSOLE: "false"
+    restart: always
+    ports:
+      - 25565:25565
+    volumes:
+      - mc-paper:/data
+
+  mc-checker:
+    image: "mchecker:latest"
+    restart: always
+    depends_on:
+      - mc
+    command: /bin/sh -c "sleep 300"
+    healthcheck:
+      test: ["CMD","python3","./mchecker.py","mc_main"]
+      interval: 120s
+      timeout: 300s
+      retries: 5
+
+volumes:
+  mc-paper:
+
