@@ -11,7 +11,7 @@ services:
       VERSION: 1.12.2
       # needed for Paper versions before 1.14
       CONSOLE: "false"
-    restart: always
+      #restart: always
     ports:
       - 25565:25565
     volumes:
@@ -22,6 +22,7 @@ services:
     restart: always
     depends_on:
       - mc
+    #sleep while main server starts
     command: /bin/sh -c "sleep 300"
     healthcheck:
       test: ["CMD","python3","./mchecker.py","mc_main"]
