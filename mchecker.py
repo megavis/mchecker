@@ -5,14 +5,26 @@
 import socket
 import sys
 
-HOST = "18.193.165.130"
-PORT = 25565
-CONN_TIMEOUT = 15
+import argparse
+
+#HOST = "18.193.165.130"
+DEFAULT_HOST = "localhost"
+DEFAULT_PORT = 25565
+DEFAULT_TIMEOUT = 15
+
+parser=argparse.ArgumentParser(description="Test Minecraft server for its health and return exit code then")
+parser.add_argument("host", action="store", type=str, 
+                            help="server hostname or IP")
+parser.add_argument("-p", action="store", dest="port", type=int, 
+                          default=DEFAULT_PORT, 
+                          help="server port (default: 25565)", required=False)
+
+args=parser.parse_args()
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     # wait for connect up to 15sec
-    s.settimeout(CONN_TIMEOUT)
-    if (s.connect_ex((HOST, PORT)) == 0):
+    s.settimeout(DEFAULT_TIMEOUT)
+    if (s.connect_ex((args.host, args.port)) == 0):
         try:
             s.sendall(b"\xfe")
 
