@@ -3,28 +3,89 @@ version: '3.0'
 services:
   mc:
     image: "mymc:plugins"
+    container_name: minecraft
     environment:
       EULA: "true"
       TYPE: PAPER
-      #MEMORY: 512M
-      MEMORY: 1G
+      #MEMORY: 2G
+      MEMORY: 1532M
       VERSION: 1.12.2
       # needed for Paper versions before 1.14
       CONSOLE: "false"
     restart: always
     ports:
       - 25565:25565
+      - 25575:25575
     volumes:
-      - mc-paper:/data
+      - /opt/minecraft/data:/data
+    networks:
+      - mc_network
 
-  autoheal:
-    image: "willfarrell/autoheal"
+  es01:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.9.3
+    container_name: es01
     environment:
-      AUTOHEAL_CONTAINER_LABEL: all
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
+    ports:
+      - 9200:9200
+#      - 9300:9300
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
-    restart: always
+      - es01_data:/usr/share/elasticsearch/data
+    networks:
+      - elk
 
+  kib01:
+    image: docker.elastic.co/kibana/kibana:7.9.3
+    container_name: kib01
+    environment:
+      - ELASTICSEARCH_URL=http://es01:9200
+      - ELASTICSEARCH_HOSTS=http://es01:9200
+      - LOGGING_QUIET=true
+    ports:
+      - 5601:5601
+    networks:
+      - elk
+    depends_on:
+      - es01
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:7.9.3
+    container_name: filebeat
+    user: root
+    command: filebeat -e -strict.perms=false
+    restart: on-failure
+    volumes:
+      - /opt/minecraft/mchecker/mchecker/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - elk
+    depends_on:
+      - es01
+
+volumes:
+  es01_data:
+    driver: local
+
+networks:
+  elk:
+    driver: bridge
+  mc_network:
+
+
+#  autoheal:
+#    image: "willfarrell/autoheal"
+#    environment:
+#      AUTOHEAL_CONTAINER_LABEL: all
+#    volumes:
+#      - /var/run/docker.sock:/var/run/docker.sock
+#    restart: always
+#  mc-paper:
+#    external: true
+#          #    name: minecraft-data
+#
         # this is deprecated
         #  mc-checker:
         #    image: "mchecker:latest"
@@ -40,6 +101,4 @@ services:
         #      timeout: "60s"
         #      retries: 3
 
-volumes:
-  mc-paper:
 

@@ -1,0 +1,42 @@
+version: '3.0'
+
+services:
+
+  es01:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.9.3
+    container_name: es01
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - 9200:9200
+#      - 9300:9300
+    volumes:
+      - es01_data:/usr/share/elasticsearch/data
+    networks:
+      - elk
+
+  kib01:
+    image: docker.elastic.co/kibana/kibana:7.9.3
+    container_name: kib01
+    environment:
+      - ELASTICSEARCH_URL=http://es01:9200
+      - ELASTICSEARCH_HOSTS=http://es01:9200
+      - LOGGING_QUIET=true
+    ports:
+      - 5601:5601
+    networks:
+      - elk
+    depends_on:
+      - es01
+
+volumes:
+  es01_data:
+    driver: local
+
+networks:
+  elk:
+    driver: bridge
+
+

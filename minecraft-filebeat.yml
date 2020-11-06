@@ -1,0 +1,38 @@
+version: '3.0'
+
+services:
+  mc:
+    image: "mymc:plugins"
+    container_name: minecraft
+    environment:
+      EULA: "true"
+      TYPE: PAPER
+      #MEMORY: 2G
+      MEMORY: 1532M
+      VERSION: 1.12.2
+      # needed for Paper versions before 1.14
+      CONSOLE: "false"
+    restart: always
+    ports:
+      - 25565:25565
+      - 25575:25575
+    volumes:
+      - /opt/minecraft/data:/data
+    networks:
+      - mc_network
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:7.9.3
+    container_name: filebeat
+    user: root
+    command: filebeat -e -strict.perms=false
+    restart: on-failure
+    volumes:
+      - ${PWD}/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+
+networks:
+  mc_network:
+
+
