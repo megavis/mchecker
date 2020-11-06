@@ -1,0 +1,15 @@
+[Unit]
+Description=Docker-compose Elasticsearch+Kibana server
+Requires=docker.service
+After=docker.service
+#ConditionPathExists=!/etc/ssh/sshd_not_to_be_run
+
+[Service]
+Restart=always
+WorkingDirectory=/opt/minecraft/mchecker/
+ExecStartPre=/usr/bin/docker-compose down
+ExecStart=/usr/bin/docker-compose -f elasticsearch.yml up
+ExecStop=/usr/bin/docker-compose down
+
+[Install]
+WantedBy=multi-user.target

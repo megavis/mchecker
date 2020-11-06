@@ -24,6 +24,8 @@ services:
   filebeat:
     image: docker.elastic.co/beats/filebeat:7.9.3
     container_name: filebeat
+    environment:
+      - ELASTIC_HOST=${ELASTICSEARCH_HOST}
     user: root
     command: filebeat -e -strict.perms=false
     restart: on-failure
