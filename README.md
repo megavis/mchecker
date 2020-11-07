@@ -27,3 +27,9 @@ can be setted up in .env file
 
 3. For running all-in-one, use docker-compose.yml config
 
+
+4. Run Django server (for development only!):
+```
+docker-compose -f django-dev.yml up -d
+```
+

@@ -1,0 +1,11 @@
+version: "3.0"
+
+services:
+  web:
+    build: ./project
+    container_name: django_dev
+    volumes:
+      - ./project/mcproject:/app
+    ports:
+      - 8000:8000
+
