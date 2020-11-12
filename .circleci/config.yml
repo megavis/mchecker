@@ -29,7 +29,7 @@ jobs:
             docker push megavis/mchecker:<< pipeline.git.tag >>
 
   deploy:
-    executor: circleci/docker
+    docker:
     steps:
       - run:
           name: Pull and restart on server
