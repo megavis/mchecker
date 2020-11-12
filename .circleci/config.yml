@@ -1,0 +1,49 @@
+version: 2.1
+
+#orbs:
+#  python: circleci/python@0.2.1
+
+jobs:
+  build-and-test:
+    working_directory: ~/src
+    executor: python/3.8
+    steps:
+      - checkout
+      - run: 
+          name: Setup environment
+          command: | 
+                  pip install --upgrade pip
+                  pip install Django==3.1.3
+      - run:
+          name: Start default webserver
+          command: |
+            cd ./project
+            ./manage.py runserver 0:8000 &
+      - run:
+          name: Test build
+          command: curl --connect-timeout 15 --silent --url http://localhost:8000 
+      - run:
+          name: Build image and push to Docker.Hub
+          command: | 
+            echo $DOCKER_TOKEN | docker login --user $DOCKER_USER
+            docker build -t mchecker:<< pipeline.git.tag >> .
+            docker push megavis/mchecker:<< pipeline.git.tag >>
+
+  deploy:
+    executor: circleci/docker
+    steps:
+      - run:
+          name: Pull and restart on server
+          command: |
+            ssh circleci@$DEPLOYMENT_SERVER_IP -c "docker pull megavis/mchecker && docker stop web && docker run -d -p 8000:8000 --name web megavis/mchecker"
+      - run:
+          name: Test server 
+          command:  curl --connect-timeout 15 --silent --url http://$DEPLOYMENT-SERVER_IP:8000
+
+workflows:
+  main:
+    jobs:
+      - build-and-test
+      - deploy:
+          requires:
+            - build-and-test
