@@ -26,7 +26,7 @@ jobs:
           name: Build image and push to Docker.Hub
           command: | 
             echo $DOCKER_TOKEN | docker login --user $DOCKER_USER
-            docker build -t mchecker:<< pipeline.git.tag >>
+            docker build -t mchecker:<< pipeline.git.tag >> .
             docker push megavis/mchecker:<< pipeline.git.tag >>
 
   deploy:
