@@ -4,7 +4,11 @@ jobs:
   build-and-test:
     docker:
       - image: cimg/python:3.8.5
+
     working_directory: ~/src
+    environment:
+      - TEST_RESULTS: /tmp/test_results.log
+
     steps:
       - checkout
       - run: 
@@ -13,36 +17,69 @@ jobs:
                   pip install --upgrade pip
                   pip install Django==3.1.3
       - run:
-          name: Start default webserver
+          name: Start webserver and run simple test
           command: |
-            cd ./project
-            ./manage.py runserver 0:8000 &
-      - run:
-          name: Test build
-          command: curl --connect-timeout 15 --silent --url http://localhost:8000 
+            set -ou pipefail
+            cd ./project/mcproject/
+            python ./manage.py runserver 0:8000 & 
+            export DJANGO_PID=$!
+            sleep 5
+            netstat -altn | tee $TEST_RESULTS
+            kill -TERM $DJANGO_PID
+
+      - store_artifacts:
+          path: /tmp/test_results.log
+
+      - setup_remote_docker:
+          version: 19.03.13
       - run:
           name: Build image and push to Docker.Hub
           command: | 
-            cd ~/src
-            echo $DOCKER_TOKEN | docker login --user $DOCKER_USER
-            docker build -t mchecker:<< pipeline.git.tag >> .
-            docker push megavis/mchecker:<< pipeline.git.tag >>
+            cd ~/src/project/
+            if [ -z "${CIRCLE_TAG}" ]; then 
+            IMAGE_TAG="latest";
+            else
+            IMAGE_TAG=$CIRCLE_TAG;
+            fi
+            docker login -u $DOCKER_USER -p $DOCKER_TOKEN
+            docker build -t megavis/mchecker:$IMAGE_TAG .
+            docker push megavis/mchecker:$IMAGE_TAG
 
   deploy:
     docker:
+      - image: cimg/base:stable
     steps:
+      - add_ssh_keys:
+          fingerprints:
+          - "b7:84:e0:af:11:9a:1c:27:82:45:15:8d:23:83:c7:c9"
       - run:
-          name: Pull and restart on server
+          name: Pull fresh image and restart container on server
           command: |
-            ssh circleci@$DEPLOYMENT_SERVER_IP -c "docker pull megavis/mchecker && docker stop web && docker run -d -p 8000:8000 --name web megavis/mchecker"
+            ssh -v -o "StrictHostKeyChecking no" ubuntu@$DEPLOYMENT_HOST_IP \<<- EOF
+                docker pull megavis/mchecker:latest; 
+                docker rm -f web 
+                docker run -d -it -p 8000:8000 --name web megavis/mchecker:latest
+            EOF
+            sleep 5
       - run:
           name: Test server 
-          command:  curl --connect-timeout 15 --silent --url http://$DEPLOYMENT-SERVER_IP:8000
+          command: curl -m 30 --retry 5 http://$DEPLOYMENT_HOST_IP:8000 | tee /tmp/serverstart_results.log
+          
+      - store_artifacts:
+          path: /tmp/serverstart_results.log
+
 
 workflows:
   main:
     jobs:
-      - build-and-test
+      - build-and-test:
+          context: mchecker
       - deploy:
+          context: mchecker
+#          filters:
+#            tags:
+#              only: /^v.*/
+#            branches:
+#              only: master
           requires:
             - build-and-test
