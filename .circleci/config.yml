@@ -5,8 +5,9 @@ version: 2.1
 
 jobs:
   build-and-test:
+    docker: 
+      - image: python:3.8-alpine
     working_directory: ~/src
-    executor: python/3.8
     steps:
       - checkout
       - run: 
@@ -25,6 +26,7 @@ jobs:
       - run:
           name: Build image and push to Docker.Hub
           command: | 
+            cd ~/src
             echo $DOCKER_TOKEN | docker login --user $DOCKER_USER
             docker build -t mchecker:<< pipeline.git.tag >> .
             docker push megavis/mchecker:<< pipeline.git.tag >>
