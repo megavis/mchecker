@@ -6,6 +6,8 @@ ENV PYTHONBUFFERED 1
 RUN pip install --upgrade pip && \
     pip install Django==3.1.3
 
+ADD ./mcproject /app
+
 WORKDIR /app
 
 CMD ["python","./manage.py","runserver","0:8000"]
