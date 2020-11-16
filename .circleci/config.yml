@@ -48,6 +48,10 @@ jobs:
   deploy:
     docker:
       - image: cimg/base:stable
+    parameters:
+      deployment_host:
+        description: Describe host's ip, that job should deploy webserver to
+        type: string
     steps:
       - add_ssh_keys:
           fingerprints:
@@ -55,7 +59,7 @@ jobs:
       - run:
           name: Pull fresh image and restart container on server
           command: |
-            ssh -v -o "StrictHostKeyChecking no" ubuntu@$DEPLOYMENT_HOST_IP \<<- EOF
+            ssh -v -o "StrictHostKeyChecking no" ubuntu@<< parameters.deployment_host >> \<<- EOF
                 docker pull megavis/mchecker:latest; 
                 docker rm -f web 
                 docker run -d -it -p 8000:8000 --name web megavis/mchecker:latest
@@ -63,7 +67,7 @@ jobs:
             sleep 5
       - run:
           name: Test server 
-          command: curl -m 30 --retry 5 http://$DEPLOYMENT_HOST_IP:8000 | tee /tmp/serverstart_results.log
+          command: curl -m 30 --retry 5 http://<< parameters.deployment_host >>:8000 | tee /tmp/serverstart_results.log
           
       - store_artifacts:
           path: /tmp/serverstart_results.log
@@ -74,12 +78,15 @@ workflows:
     jobs:
       - build-and-test:
           context: mchecker
+
       - deploy:
           context: mchecker
-#          filters:
-#            tags:
-#              only: /^v.*/
-#            branches:
-#              only: master
+          deployment_host: $DEPLOYMENT_HOST_IP
+          filters:
+            tags:
+              only: /^v.*/
+            branches:
+              only: master
           requires:
             - build-and-test
+
