@@ -1,9 +1,51 @@
 version: 2.1
 
+executors:
+  python:
+    description: Runs docker executor with specific Python version 
+    parameters:
+      version:
+        description: Select the Python version to use in executor
+        type: string
+        default: "3.8.0"
+    docker: 
+      - image: cimg/python:<< parameters.version >>
+
+commands:
+  dockerhub-workout:
+    description: Build image from current path first, then sign in to the Docker Hub and push image there
+    parameters:
+      image:
+        description: name of image
+        type: string
+      tag:
+        description: image tag
+        type: string 
+        default: "latest"
+      username:
+        description: Docker Hub login username
+        type: string
+      secret:
+        description: Docker Hub password or token
+        type: string
+    steps:
+      - setup_remote_docker:
+          version: 19.03.13
+      - run:
+          name: Build image, login to Docker Hub, push
+          command: |
+            if [ -z "<< parameters.tag >>" ]; then 
+            IMAGE_TAG="latest";
+            else
+            IMAGE_TAG="<< parameters.tag >>"; # FIXME
+            fi
+            docker login -u << parameters.username >> -p << parameters.secret >>
+            docker build -t << parameters.image >>:$IMAGE_TAG .
+            docker push << parameters.image >>:$IMAGE_TAG
+
 jobs:
   build-and-test:
-    docker:
-      - image: cimg/python:3.8.5
+    executor: python
 
     working_directory: ~/src
     environment:
@@ -30,20 +72,13 @@ jobs:
       - store_artifacts:
           path: /tmp/test_results.log
 
-      - setup_remote_docker:
-          version: 19.03.13
-      - run:
-          name: Build image and push to Docker.Hub
-          command: | 
-            cd ~/src/project/
-            if [ -z "${CIRCLE_TAG}" ]; then 
-            IMAGE_TAG="latest";
-            else
-            IMAGE_TAG=$CIRCLE_TAG;
-            fi
-            docker login -u $DOCKER_USER -p $DOCKER_TOKEN
-            docker build -t megavis/mchecker:$IMAGE_TAG .
-            docker push megavis/mchecker:$IMAGE_TAG
+      - run: cd ~/src/project/
+
+      - dockerhub-workout:
+          image: "megavis/mchecker"
+          tag: ${CIRCLE_TAG}
+          username: $DOCKER_USER
+          secret: $DOCKER_TOKEN
 
   deploy:
     docker:
