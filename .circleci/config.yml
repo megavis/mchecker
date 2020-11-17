@@ -28,12 +28,17 @@ commands:
       secret:
         description: Docker Hub password or token
         type: string
+      path:
+        description: Place where all the magic happened :-))
+        type: string
+        default: "."
     steps:
       - setup_remote_docker:
           version: 19.03.13
       - run:
           name: Build image, login to Docker Hub, push
           command: |
+            cd << parameters.path >>
             if [ -z "<< parameters.tag >>" ]; then 
             IMAGE_TAG="latest";
             else
@@ -72,13 +77,13 @@ jobs:
       - store_artifacts:
           path: /tmp/test_results.log
 
-      - run: cd ~/src/project/
 
       - dockerhub-workout:
           image: "megavis/mchecker"
           tag: ${CIRCLE_TAG}
           username: $DOCKER_USER
           secret: $DOCKER_TOKEN
+          path: "~/src/project/"
 
   deploy:
     docker:
